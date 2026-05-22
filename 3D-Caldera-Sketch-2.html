@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Caldera Sketch</title>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"}}
+</script>
+<style>
+:root{--bg:#07090d;--sf:#0d1117;--sf2:#111a24;--br:#1c2a38;--br2:#243040;--ac:#e07030;--ac2:#28c8a0;--ac3:#5888e8;--tx:#b8ccd8;--td:#3a5a78;--tm:#6888a0;--dg:#cc3030;--mono:'Courier New',monospace}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--tx);font-family:var(--mono);font-size:12px;display:flex;flex-direction:column;height:100vh}
+#hdr{background:var(--sf);border-bottom:1px solid var(--br);padding:6px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+#hdr h1{font-size:12px;letter-spacing:5px;color:var(--ac);font-weight:normal;text-transform:uppercase;white-space:nowrap}
+.sp{flex:1}
+.hbtn{padding:3px 9px;border:1px solid var(--br2);background:transparent;color:var(--tm);font-family:var(--mono);font-size:11px;cursor:pointer;letter-spacing:1px;border-radius:2px;transition:all .15s;white-space:nowrap}
+.hbtn:hover,.hbtn.on{border-color:var(--ac);color:var(--ac)}.hbtn.g{border-color:var(--ac2);color:var(--ac2)}.hbtn.g:hover{background:rgba(40,200,160,.1)}
+#main{display:flex;flex:1;overflow:hidden;min-height:0}
+#lp{width:230px;background:var(--sf);border-right:1px solid var(--br);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.tool-row{display:flex;flex-wrap:wrap;gap:2px;padding:5px 7px;border-bottom:1px solid var(--br);flex-shrink:0}
+.tb{width:28px;height:28px;border:1px solid transparent;background:transparent;color:var(--td);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;border-radius:3px;transition:all .12s;user-select:none;flex-shrink:0}
+.tb:hover{border-color:var(--br2);color:var(--tx);background:var(--sf2)}.tb.on{border-color:var(--ac);color:var(--ac);background:rgba(224,112,48,.1)}
+#lyr-panel{flex:1;overflow-y:auto;padding-bottom:8px}
+#lyr-panel::-webkit-scrollbar{width:4px}#lyr-panel::-webkit-scrollbar-track{background:var(--bg)}#lyr-panel::-webkit-scrollbar-thumb{background:var(--br2);border-radius:2px}
+.lhdr{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--td);padding:7px 10px 4px;border-bottom:1px solid var(--br);display:flex;align-items:center;justify-content:space-between}
+.lhdr-cnt{color:var(--ac);letter-spacing:0}
+.lyr-item{display:flex;align-items:center;gap:4px;padding:4px 8px;cursor:pointer;transition:background .1s;min-height:30px}
+.lyr-item:hover{background:rgba(255,255,255,.03)}.lyr-item.sel{background:rgba(224,112,48,.07)}
+.lyr-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.lyr-ico{font-size:12px;flex-shrink:0;width:16px;text-align:center;color:var(--td)}
+.lyr-nm{flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.lyr-vis{width:22px;height:22px;border:none;background:transparent;color:var(--td);cursor:pointer;font-size:13px;flex-shrink:0;padding:0;line-height:1;transition:color .1s;display:flex;align-items:center;justify-content:center}
+.lyr-vis:hover{color:var(--tx)}.lyr-vis.off{color:var(--br2)}
+.lyr-sldr{width:50px;flex-shrink:0;accent-color:var(--ac2);cursor:pointer}
+.lyr-empty{text-align:center;color:var(--td);font-size:11px;padding:14px 0;opacity:.4;letter-spacing:1px}
+#cw{flex:1;position:relative;overflow:hidden;background:var(--bg)}
+canvas{display:block;width:100%!important;height:100%!important;outline:none}
+#drop{position:absolute;inset:0;background:rgba(7,9,13,.88);border:2px dashed var(--ac);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;z-index:50;pointer-events:none;opacity:0;transition:opacity .2s}
+#drop.vis{opacity:1;pointer-events:all}
+#drop .di{font-size:52px}#drop .dl{font-size:14px;letter-spacing:3px;color:var(--ac);text-transform:uppercase}#drop .ds{color:var(--td);font-size:11px}
+#lp-ov{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:20;pointer-events:none}
+#lp-ov.gone{display:none}
+.lp-icon{font-size:72px;opacity:.18}.lp-text{color:var(--td);letter-spacing:3px;font-size:13px;text-transform:uppercase}.lp-sub{color:var(--td);opacity:.4;font-size:11px}
+#prog{position:absolute;inset:0;background:rgba(7,9,13,.92);display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;z-index:60}
+#prog.show{display:flex}
+.pbw{width:220px;height:2px;background:var(--br2);border-radius:1px}.pbf{height:100%;background:var(--ac);border-radius:1px;transition:width .2s}.pbt{color:var(--td);font-size:11px;letter-spacing:3px}
+#hint{position:absolute;bottom:36px;left:50%;transform:translateX(-50%);background:rgba(13,17,23,.9);border:1px solid var(--br2);padding:5px 12px;border-radius:2px;font-size:10px;color:var(--td);letter-spacing:1px;pointer-events:none;white-space:nowrap;z-index:5}
+#scalebar{position:absolute;bottom:40px;left:12px;pointer-events:none;z-index:5}
+#sb-bar{height:3px;background:var(--ac2);border-left:2px solid var(--ac2);border-right:2px solid var(--ac2);min-width:20px}
+#sb-lbl{font-size:10px;color:var(--ac2);letter-spacing:1px;margin-top:3px}
+#gleg{position:absolute;top:10px;right:10px;background:rgba(13,17,23,.85);border:1px solid var(--br2);padding:7px 10px;font-size:10px;color:var(--td);letter-spacing:1px;line-height:2;pointer-events:none;z-index:5;display:none}
+#gleg b{color:var(--tx)}.gr{color:#dd4444}.gg{color:#44cc44}.gb{color:#4488ee}
+.depth-lbl{color:#286070;font-family:'Courier New',monospace;font-size:10px;pointer-events:none;white-space:nowrap;letter-spacing:1px;text-shadow:0 0 6px #07090d,0 0 3px #07090d}
+#rp{width:252px;background:var(--sf);border-left:1px solid var(--br);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+#rp-inner{flex:1;overflow-y:auto;padding:10px 12px}
+#rp-inner::-webkit-scrollbar{width:4px}#rp-inner::-webkit-scrollbar-track{background:var(--bg)}#rp-inner::-webkit-scrollbar-thumb{background:var(--br2)}
+.rpt{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--td);margin-bottom:8px}
+.rpt2{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--td);margin:9px 0 5px;border-top:1px solid var(--br);padding-top:7px}
+.fr{display:flex;align-items:center;gap:6px;margin-bottom:4px}.fr:last-child{margin-bottom:0}
+.fl{width:80px;color:var(--td);font-size:11px;flex-shrink:0}
+.fi{flex:1;background:var(--bg);border:1px solid var(--br2);color:var(--tx);font-family:var(--mono);font-size:11px;padding:3px 6px;border-radius:2px;outline:none;transition:border-color .1s}
+.fi:focus{border-color:var(--ac)}
+input[type=color].fi{width:34px;flex:none;height:24px;padding:1px;cursor:pointer}
+input[type=range].fi{padding:0;cursor:pointer;accent-color:var(--ac)}
+.fv{width:36px;color:var(--ac2);text-align:right;font-size:11px;flex-shrink:0}
+.tcrow{display:flex;gap:4px;margin-bottom:8px}
+.tcb{flex:1;padding:4px 2px;border:1px solid var(--br2);background:transparent;color:var(--tm);font-family:var(--mono);font-size:11px;cursor:pointer;border-radius:2px;letter-spacing:1px;transition:all .15s;text-align:center}
+.tcb:hover{border-color:var(--ac);color:var(--ac)}.tcb.on{border-color:var(--ac);color:var(--ac);background:rgba(224,112,48,.12)}
+.tcb.sp{border-color:var(--ac3);color:var(--ac3)}.tcb.sp:hover{background:rgba(88,136,232,.1)}
+.pbtn{width:100%;padding:5px;border:1px solid var(--br2);background:transparent;color:var(--tm);font-family:var(--mono);font-size:11px;cursor:pointer;border-radius:2px;letter-spacing:1px;transition:all .15s;margin-top:5px}
+.pbtn:hover{border-color:var(--ac);color:var(--ac)}.pbtn.del:hover{border-color:var(--dg);color:var(--dg)}
+.vrow{font-size:11px;color:var(--ac2);padding:2px 0;word-break:break-all}
+.vrow .vl{color:var(--td);margin-right:4px}
+.vtot{font-size:11px;color:var(--tx);padding:2px 0;border-top:1px solid var(--br);margin-top:4px;padding-top:4px}
+.vtot .vl{color:var(--td);margin-right:4px}
+#rp-empty{display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;height:80px}
+.empty-hint{color:var(--td);font-size:11px;line-height:2;letter-spacing:1px}
+#statusbar{background:var(--sf);border-top:1px solid var(--br);padding:4px 12px;display:flex;gap:16px;font-size:10px;color:var(--td);flex-shrink:0;align-items:center}
+.sti{display:flex;align-items:center;gap:5px;letter-spacing:.5px}.stv{color:var(--ac2)}.stsep{color:var(--br2)}
+</style>
+</head>
+<body>
+<div id="hdr">
+  <h1>3D Caldera Sketch</h1>
+  <div class="sp"></div>
+  <button class="hbtn on" id="btn-grid3d">Griglia 3D</button>
+  <button class="hbtn g" id="btn-exp-json">JSON</button>
+  <button class="hbtn g" id="btn-exp-glb">GLB</button>
+  <button class="hbtn" id="btn-load">Carica GLTF / GLB</button>
+  <input type="file" id="finput" accept=".gltf,.glb" style="display:none">
+</div>
+<div id="main">
+  <div id="lp">
+    <!-- Row 1: navigate + select -->
+    <div class="tool-row">
+      <button class="tb on" data-mode="navigate" title="Naviga (N)">🔭</button>
+      <button class="tb" data-mode="select" title="Seleziona (V)">⬡</button>
+    </div>
+    <!-- Row 2: shapes -->
+    <div class="tool-row">
+      <button class="tb" data-mode="add-sphere"    title="Sfera (P)">⬤</button>
+      <button class="tb" data-mode="add-ellipsoid" title="Ellissoide (E)">◎</button>
+      <button class="tb" data-mode="add-cylinder"  title="Cilindro (L)">⬣</button>
+      <button class="tb" data-mode="add-box"       title="Cubo (B)">⬛</button>
+      <button class="tb" data-mode="add-disc"      title="Disco (D)">○</button>
+      <button class="tb" data-mode="add-rect"      title="Piano (Q)">▭</button>
+      <button class="tb" data-mode="add-campana"   title="Campana (C)">🔔</button>
+    </div>
+    <!-- Row 3: undo/redo/clear -->
+    <div class="tool-row">
+      <button class="tb" id="btn-undo"  title="Annulla (Ctrl+Z)">↩</button>
+      <button class="tb" id="btn-redo"  title="Rifai (Ctrl+Y)">↪</button>
+      <button class="tb" id="btn-clear" title="Cancella tutto">🗑</button>
+    </div>
+    <div id="lyr-panel">
+      <div id="lyr-terrain-wrap" style="display:none">
+        <div class="lhdr">TERRENO</div>
+        <div id="lyr-terrain-list"></div>
+      </div>
+      <div>
+        <div class="lhdr">FORME <span class="lhdr-cnt" id="lyr-cnt">0</span></div>
+        <div id="lyr-shapes-list"><div class="lyr-empty">Nessuna forma</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="cw">
+    <canvas id="canvas" tabindex="0"></canvas>
+    <div id="drop"><div class="di">🌋</div><div class="dl">Rilascia GLTF / GLB</div><div class="ds">DEM da qgis2threejs</div></div>
+    <div id="lp-ov"><div class="lp-icon">⛰</div><div class="lp-text">Trascina un file GLTF / GLB</div><div class="lp-sub">oppure usa "Carica GLTF / GLB"</div></div>
+    <div id="prog"><div class="pbt">CARICAMENTO…</div><div class="pbw"><div class="pbf" id="pb" style="width:0%"></div></div></div>
+    <div id="hint">NAVIGA — sin: ruota · dest: pan · scroll: zoom</div>
+    <div id="scalebar"><div id="sb-bar" style="width:60px"></div><div id="sb-lbl">— km</div></div>
+    <div id="gleg"><b>GIZMO</b><br><span class="gr">■</span>X &nbsp;<span class="gg">■</span>Y &nbsp;<span class="gb">■</span>Z<br><b>T</b> trasla &nbsp;<b>R</b> ruota &nbsp;<b>S</b> scala</div>
+  </div>
+
+  <div id="rp">
+    <div id="rp-inner">
+      <div id="rp-empty"><div class="empty-hint">Seleziona una forma<br>o strumento di disegno</div></div>
+
+      <div id="rp-create" style="display:none">
+        <div class="rpt">NUOVA — <span id="rp-ctype" style="color:var(--ac2)">SFERA</span></div>
+        <div class="fr"><span class="fl">Nome</span><input class="fi" type="text" id="n-name" value="Forma 1"></div>
+        <div class="fr"><span class="fl">Colore</span><input class="fi" type="color" id="n-color" value="#e87040"></div>
+        <div class="fr"><span class="fl">Opacità</span><input class="fi" type="range" id="n-opacity" min=".05" max="1" step=".05" value=".7"><span class="fv" id="n-opv">.70</span></div>
+        <div class="fr"><span class="fl">Offset↓ (m)</span><input class="fi" type="number" id="n-depth" value="0" step="100"></div>
+        <div id="np-sphere"><div class="rpt2">SFERA</div><div class="fr"><span class="fl">Raggio (m)</span><input class="fi" type="number" id="n-sr" value="500" step="100"></div></div>
+        <div id="np-ellipsoid" style="display:none"><div class="rpt2">ELLISSOIDE</div>
+          <div class="fr"><span class="fl">a (X) m</span><input class="fi" type="number" id="n-ea" value="2000" step="100"></div>
+          <div class="fr"><span class="fl">b (Z) m</span><input class="fi" type="number" id="n-eb" value="2000" step="100"></div>
+          <div class="fr"><span class="fl">c (Y↑) m</span><input class="fi" type="number" id="n-ec" value="1000" step="100"></div></div>
+        <div id="np-cylinder" style="display:none"><div class="rpt2">CILINDRO</div>
+          <div class="fr"><span class="fl">Raggio (m)</span><input class="fi" type="number" id="n-cylr" value="500" step="100"></div>
+          <div class="fr"><span class="fl">Altezza (m)</span><input class="fi" type="number" id="n-cylh" value="2000" step="100"></div></div>
+        <div id="np-box" style="display:none"><div class="rpt2">CUBO / BOX</div>
+          <div class="fr"><span class="fl">Largh. X (m)</span><input class="fi" type="number" id="n-bw" value="1000" step="100"></div>
+          <div class="fr"><span class="fl">Alt. Y (m)</span><input class="fi" type="number" id="n-bh" value="1000" step="100"></div>
+          <div class="fr"><span class="fl">Prof. Z (m)</span><input class="fi" type="number" id="n-bd" value="1000" step="100"></div></div>
+        <div id="np-disc" style="display:none"><div class="rpt2">DISCO</div>
+          <div class="fr"><span class="fl">Raggio (m)</span><input class="fi" type="number" id="n-discr" value="2000" step="100"></div>
+          <div class="fr"><span class="fl">Spessore (m)</span><input class="fi" type="number" id="n-disct" value="10" step="10" min="1"></div></div>
+        <div id="np-rect" style="display:none"><div class="rpt2">PIANO RETTANGOLARE</div>
+          <div class="fr"><span class="fl">Largh. X (m)</span><input class="fi" type="number" id="n-rw" value="2000" step="100"></div>
+          <div class="fr"><span class="fl">Prof. Z (m)</span><input class="fi" type="number" id="n-rd" value="2000" step="100"></div>
+          <div class="fr"><span class="fl">Spessore (m)</span><input class="fi" type="number" id="n-rt" value="10" step="10" min="1"></div></div>
+        <div id="np-campana" style="display:none"><div class="rpt2">CAMPANA</div>
+          <div class="fr"><span class="fl">Raggio (m)</span><input class="fi" type="number" id="n-cr" value="1000" step="100"></div>
+          <div class="fr"><span class="fl">Alt. cil. (m)</span><input class="fi" type="number" id="n-ch" value="2000" step="100"></div></div>
+      </div>
+
+      <div id="rp-select" style="display:none">
+        <div class="rpt">TRASFORMA — <span id="s-type" style="color:var(--ac2)">…</span></div>
+        <div class="tcrow">
+          <button class="tcb on" data-tc="translate">T</button>
+          <button class="tcb" data-tc="rotate">R</button>
+          <button class="tcb" data-tc="scale">S</button>
+          <button class="tcb sp" id="btn-space">WORLD</button>
+        </div>
+        <div class="rpt2">POSIZIONE (m)</div>
+        <div class="fr"><span class="fl">X</span><input class="fi" type="number" id="s-px" step="1"></div>
+        <div class="fr"><span class="fl">Y (alto)</span><input class="fi" type="number" id="s-py" step="1"></div>
+        <div class="fr"><span class="fl">Z</span><input class="fi" type="number" id="s-pz" step="1"></div>
+        <div class="rpt2">ROTAZIONE °</div>
+        <div class="fr"><span class="fl">X</span><input class="fi" type="number" id="s-rx" step="1"></div>
+        <div class="fr"><span class="fl">Y</span><input class="fi" type="number" id="s-ry" step="1"></div>
+        <div class="fr"><span class="fl">Z</span><input class="fi" type="number" id="s-rz" step="1"></div>
+        <div id="sp-sphere"   style="display:none"><div class="rpt2">DIMENSIONE</div><div class="fr"><span class="fl">Raggio (m)</span><input class="fi" type="number" id="s-sr" step="1"></div></div>
+        <div id="sp-ellipsoid" style="display:none"><div class="rpt2">SEMI-ASSI (m)</div>
+          <div class="fr"><span class="fl">a (X)</span><input class="fi" type="number" id="s-ea" step="1"></div>
+          <div class="fr"><span class="fl">b (Z)</span><input class="fi" type="number" id="s-eb" step="1"></div>
+          <div class="fr"><span class="fl">c (Y↑)</span><input class="fi" type="number" id="s-ec" step="1"></div></div>
+        <div id="sp-cylinder" style="display:none"><div class="rpt2">DIMENSIONE</div>
+          <div class="fr"><span class="fl">Raggio (m)</span><input class="fi" type="number" id="s-cylr" step="1"></div>
+          <div class="fr"><span class="fl">Altezza (m)</span><input class="fi" type="number" id="s-cylh" step="1"></div></div>
+        <div id="sp-box" style="display:none"><div class="rpt2">DIMENSIONE</div>
+          <div class="fr"><span class="fl">Largh. X</span><input class="fi" type="number" id="s-bw" step="1"></div>
+          <div class="fr"><span class="fl">Alt. Y</span><input class="fi" type="number" id="s-bh" step="1"></div>
+          <div class="fr"><span class="fl">Prof. Z</span><input class="fi" type="number" id="s-bd" step="1"></div></div>
+        <div id="sp-disc" style="display:none"><div class="rpt2">DIMENSIONE</div>
+          <div class="fr"><span class="fl">Raggio (m)</span><input class="fi" type="number" id="s-discr" step="1"></div>
+          <div class="fr"><span class="fl">Spessore (m)</span><input class="fi" type="number" id="s-disct" step="1" min="1"></div></div>
+        <div id="sp-rect" style="display:none"><div class="rpt2">DIMENSIONE</div>
+          <div class="fr"><span class="fl">Largh. X</span><input class="fi" type="number" id="s-rw" step="1"></div>
+          <div class="fr"><span class="fl">Prof. Z</span><input class="fi" type="number" id="s-rd" step="1"></div>
+          <div class="fr"><span class="fl">Spessore</span><input class="fi" type="number" id="s-rt" step="1" min="1"></div></div>
+        <div id="sp-campana" style="display:none"><div class="rpt2">CAMPANA (m)</div>
+          <div class="fr"><span class="fl">Raggio</span><input class="fi" type="number" id="s-cr" step="1"></div>
+          <div class="fr"><span class="fl">Alt. cil.</span><input class="fi" type="number" id="s-ch" step="1"></div></div>
+        <div class="rpt2">MATERIALE</div>
+        <div class="fr"><span class="fl">Colore</span><input class="fi" type="color" id="s-color"></div>
+        <div class="rpt2">NOME</div>
+        <div class="fr"><input class="fi" type="text" id="s-name" style="flex:1"></div>
+        <div class="rpt2">VOLUME</div>
+        <div class="vrow"><span class="vl">Forma:</span><span id="v-sel">—</span></div>
+        <div class="vtot"><span class="vl">Totale:</span><span id="v-tot">—</span></div>
+        <button class="pbtn del" id="btn-del">Elimina (Del)</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="statusbar">
+  <div class="sti">MODO <span class="stv" id="st-m">NAVIGA</span></div>
+  <div class="stsep">·</div>
+  <div class="sti">GIZMO <span class="stv" id="st-tc">—</span></div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls }     from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader }        from 'three/addons/loaders/GLTFLoader.js';
+import { TransformControls } from 'three/addons/controls/TransformControls.js';
+import { GLTFExporter }      from 'three/addons/exporters/GLTFExporter.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+// ── Renderer ─────────────────────────────────────────────────
+const canvas = document.getElementById('canvas');
+const cw     = document.getElementById('cw');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setClearColor(0x07090d);
+renderer.shadowMap.enabled = false;
+
+// CSS2D label renderer (for depth labels)
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.domElement.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden';
+cw.appendChild(labelRenderer.domElement);
+
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, 1, 1, 1e7);
+camera.position.set(0, 5000, 12000);
+scene.add(camera);
+
+// ── Lights (follow camera) ────────────────────────────────────
+scene.add(new THREE.AmbientLight(0x405570, 1.35));
+const keyLight = new THREE.DirectionalLight(0xfff8ee, 2.0);
+keyLight.position.set(2, 3, 4); keyLight.castShadow = false;
+camera.add(keyLight);
+const rimLight = new THREE.DirectionalLight(0x6080c0, 0.6);
+rimLight.position.set(-3, -1, -2);
+camera.add(rimLight);
+
+// ── Controls ──────────────────────────────────────────────────
+const orbit = new OrbitControls(camera, renderer.domElement);
+orbit.enableDamping = true; orbit.dampingFactor = 0.07;
+orbit.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
+
+const tc = new TransformControls(camera, renderer.domElement);
+let tcDragging = false;
+tc.addEventListener('dragging-changed', e => { orbit.enabled = !e.value; tcDragging = e.value; });
+tc.addEventListener('objectChange', syncSelPanel);
+scene.add(tc);
+let tcSpace = 'world';
+
+// ── Resize ────────────────────────────────────────────────────
+function resize() {
+  const w = cw.clientWidth, h = cw.clientHeight;
+  renderer.setSize(w, h, false);
+  labelRenderer.setSize(w, h);
+  camera.aspect = w/h; camera.updateProjectionMatrix();
+}
+resize(); new ResizeObserver(resize).observe(cw);
+
+// ── State ─────────────────────────────────────────────────────
+let mode = 'navigate', terrainMeshes = [], terrainLoaded = false, sceneMaxDim = 2000;
+let shapes = [], selShape = null, selObjs = [], shapeN = 1;
+let gltfLayers = [], gridGroup = null, gridFaces = {}, gridCenter = new THREE.Vector3(), gridOn = true;
+const undoStack = [], redoStack = [];
+
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+
+// ── Material ──────────────────────────────────────────────────
+function getMat(color, opacity) {
+  return new THREE.MeshStandardMaterial({
+    color, transparent: opacity < 0.99, opacity,
+    roughness: 0.50, metalness: 0.20,
+    side: THREE.FrontSide,  // only outer surfaces → inner faces hidden by depth buffer → shapes look merged
+    depthWrite: true         // write depth so overlapping shapes occlude each other
+  });
+}
+
+// ── GLTF Load ─────────────────────────────────────────────────
+const gltfLoader = new GLTFLoader();
+function loadFile(file) {
+  const url = URL.createObjectURL(file);
+  document.getElementById('prog').classList.add('show');
+  document.getElementById('lp-ov').classList.add('gone');
+  scene.children.filter(c => c.userData.isTerrain).forEach(c => scene.remove(c));
+  terrainMeshes = []; gltfLayers = [];
+
+  gltfLoader.load(url, gltf => {
+    document.getElementById('prog').classList.remove('show');
+    URL.revokeObjectURL(url);
+    const root = gltf.scene; root.userData.isTerrain = true;
+    root.traverse(o => { if (o.isMesh) { terrainMeshes.push(o); if (o.material) o.material.side = THREE.DoubleSide; }});
+    scene.add(root);
+
+    const box = new THREE.Box3().setFromObject(root);
+    const center = box.getCenter(new THREE.Vector3());
+    const size   = box.getSize(new THREE.Vector3());
+    sceneMaxDim  = Math.max(size.x, size.y, size.z);
+
+    camera.near = sceneMaxDim * .0005; camera.far = sceneMaxDim * 100;
+    camera.position.set(center.x, center.y + sceneMaxDim * .7, center.z + sceneMaxDim * 1.1);
+    camera.updateProjectionMatrix();
+    orbit.target.copy(center);
+    orbit.minDistance = sceneMaxDim * .005; orbit.maxDistance = sceneMaxDim * 30;
+    orbit.update();
+
+    const baseName = file.name.replace(/\.[^.]+$/, '');
+    (root.children.length > 0 ? root.children : [root]).forEach((child, i) => {
+      gltfLayers.push({ id: i, name: child.name || `${baseName} ${i+1}`, object: child, visible: true, opacity: 1 });
+    });
+
+    // Grid top = box.max.y  (terrain surface level = 0m reference)
+    buildGrid(center.x, center.z, box.max.y);
+    renderLayerPanel();
+    terrainLoaded = true;
+  },
+  xhr => { if (xhr.total > 0) document.getElementById('pb').style.width = (xhr.loaded/xhr.total*100)+'%'; },
+  err => { document.getElementById('prog').classList.remove('show'); alert('Errore: '+(err.message||err)); });
+}
+
+// ── 3D Reference Grid ─────────────────────────────────────────
+// 30×30×30 km · 1km cells · top at yTop · no top-face grid (only perimeter)
+// Each side face is a THREE.Group: grid lines + bright bottom edge
+function buildGrid(cx, cz, yTop = 0) {
+  if (gridGroup) scene.remove(gridGroup);
+  gridGroup = new THREE.Group(); gridFaces = {};
+  gridCenter.set(cx, yTop, cz);
+
+  const EXT=15000, DEP=30000, STEP=1000, N=30, M=30;
+  const matG = new THREE.LineBasicMaterial({ color:0x1a3850, transparent:true, opacity:.52 });
+  const matE = new THREE.LineBasicMaterial({ color:0x1e5070, transparent:true, opacity:.82 });
+
+  function seg(pts, mat) {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+    return new THREE.LineSegments(g, mat);
+  }
+
+  // Top perimeter border (4 bright edges at yTop)
+  gridGroup.add(seg([
+    cx-EXT,yTop,cz-EXT, cx+EXT,yTop,cz-EXT,
+    cx+EXT,yTop,cz-EXT, cx+EXT,yTop,cz+EXT,
+    cx+EXT,yTop,cz+EXT, cx-EXT,yTop,cz+EXT,
+    cx-EXT,yTop,cz+EXT, cx-EXT,yTop,cz-EXT,
+  ], matE));
+
+  // 4 corner verticals (always visible)
+  const cPts = [];
+  [[cx-EXT,cz-EXT],[cx+EXT,cz-EXT],[cx+EXT,cz+EXT],[cx-EXT,cz+EXT]].forEach(([x,z]) =>
+    cPts.push(x,yTop,z, x,yTop-DEP,z));
+  gridGroup.add(seg(cPts, matE));
+
+  // Depth tick marks + CSS2D labels at NE outer corner
+  const tPts = [];
+  [[cx-EXT,cz-EXT],[cx+EXT,cz-EXT],[cx+EXT,cz+EXT],[cx-EXT,cz+EXT]].forEach(([x,z]) => {
+    for (let k=5; k<=30; k+=5) {
+      const y=yTop-k*STEP, t=STEP*.18;
+      tPts.push(x-t,y,z, x+t,y,z, x,y,z-t, x,y,z+t);
+    }
+  });
+  gridGroup.add(seg(tPts, matE));
+
+  // Depth labels via CSS2DRenderer (NE outer corner)
+  for (let k=5; k<=30; k+=5) {
+    const div = document.createElement('div');
+    div.className = 'depth-lbl';
+    div.textContent = `-${k} km`;
+    const lbl = new CSS2DObject(div);
+    lbl.position.set(cx+EXT+350, yTop-k*STEP, cz+EXT+350);
+    gridGroup.add(lbl);
+  }
+
+  // Side face builder: returns Group with grid lines + bright bottom edge
+  function makeFace(gridPts, bottomEdgePts) {
+    const grp = new THREE.Group();
+    grp.add(seg(gridPts, matG));
+    grp.add(seg(bottomEdgePts, matE));
+    return grp;
+  }
+
+  // North face: Z = cz+EXT
+  const Np = [];
+  for (let k=1; k<=N; k++) { const y=yTop-k*STEP; Np.push(cx-EXT,y,cz+EXT, cx+EXT,y,cz+EXT); }
+  for (let i=1; i<M; i++) { const x=cx-EXT+i*STEP; Np.push(x,yTop,cz+EXT, x,yTop-DEP,cz+EXT); }
+  gridFaces.north = makeFace(Np, [cx-EXT,yTop-DEP,cz+EXT, cx+EXT,yTop-DEP,cz+EXT]);
+  gridGroup.add(gridFaces.north);
+
+  // South face: Z = cz-EXT
+  const Sp = [];
+  for (let k=1; k<=N; k++) { const y=yTop-k*STEP; Sp.push(cx-EXT,y,cz-EXT, cx+EXT,y,cz-EXT); }
+  for (let i=1; i<M; i++) { const x=cx-EXT+i*STEP; Sp.push(x,yTop,cz-EXT, x,yTop-DEP,cz-EXT); }
+  gridFaces.south = makeFace(Sp, [cx-EXT,yTop-DEP,cz-EXT, cx+EXT,yTop-DEP,cz-EXT]);
+  gridGroup.add(gridFaces.south);
+
+  // East face: X = cx+EXT
+  const Ep = [];
+  for (let k=1; k<=N; k++) { const y=yTop-k*STEP; Ep.push(cx+EXT,y,cz-EXT, cx+EXT,y,cz+EXT); }
+  for (let j=1; j<M; j++) { const z=cz-EXT+j*STEP; Ep.push(cx+EXT,yTop,z, cx+EXT,yTop-DEP,z); }
+  gridFaces.east = makeFace(Ep, [cx+EXT,yTop-DEP,cz-EXT, cx+EXT,yTop-DEP,cz+EXT]);
+  gridGroup.add(gridFaces.east);
+
+  // West face: X = cx-EXT
+  const Wp = [];
+  for (let k=1; k<=N; k++) { const y=yTop-k*STEP; Wp.push(cx-EXT,y,cz-EXT, cx-EXT,y,cz+EXT); }
+  for (let j=1; j<M; j++) { const z=cz-EXT+j*STEP; Wp.push(cx-EXT,yTop,z, cx-EXT,yTop-DEP,z); }
+  gridFaces.west = makeFace(Wp, [cx-EXT,yTop-DEP,cz-EXT, cx-EXT,yTop-DEP,cz+EXT]);
+  gridGroup.add(gridFaces.west);
+
+  gridGroup.visible = gridOn;
+  scene.add(gridGroup);
+}
+
+function updateGridFaces() {
+  if (!gridFaces.north) return;
+  const cam = camera.position.clone().sub(gridCenter);
+  const ax = Math.abs(cam.x), az = Math.abs(cam.z);
+  if (ax >= az) {
+    gridFaces.east.visible  = cam.x <= 0;
+    gridFaces.west.visible  = cam.x >= 0;
+    gridFaces.north.visible = true;
+    gridFaces.south.visible = true;
+  } else {
+    gridFaces.north.visible = cam.z <= 0;
+    gridFaces.south.visible = cam.z >= 0;
+    gridFaces.east.visible  = true;
+    gridFaces.west.visible  = true;
+  }
+}
+
+// ── Raycasting ────────────────────────────────────────────────
+function setMouse(e) {
+  const r = canvas.getBoundingClientRect();
+  mouse.x = ((e.clientX-r.left)/r.width)*2-1;
+  mouse.y = -((e.clientY-r.top)/r.height)*2+1;
+  ray.setFromCamera(mouse, camera);
+}
+function hitTerrain(e) { setMouse(e); const h=ray.intersectObjects(terrainMeshes,true); return h.length?h[0].point.clone():null; }
+function hitShape(e) {
+  setMouse(e); const h=ray.intersectObjects(selObjs,true); if(!h.length) return null;
+  let obj=h[0].object; while(obj){const s=shapes.find(s=>s.root===obj);if(s)return s;obj=obj.parent;} return null;
+}
+
+// ── Materials ─────────────────────────────────────────────────
+const vEl = id => document.getElementById(id).value;
+const sv  = (id,x) => { document.getElementById(id).value = x; };
+
+function newName() { const nm=vEl('n-name')||`Forma ${shapeN}`; document.getElementById('n-name').value=`Forma ${++shapeN}`; return nm; }
+
+// ── Render order (shape[0]=highest priority, always on top) ──
+function updateRenderOrders() {
+  const n = shapes.length;
+  shapes.forEach((s, i) => {
+    s.root.traverse(o => { if (o.isMesh) o.renderOrder = n - i; });
+  });
+}
+
+// ── Shape Factories ───────────────────────────────────────────
+function mkMat(c,o){return getMat(c,o);}
+function makeSphere(pos){
+  const c=vEl('n-color'),o=+vEl('n-opacity'),r=+vEl('n-sr')||500,d=+vEl('n-depth')||0;
+  const root=new THREE.Group();root.position.copy(pos);root.position.y-=d;root.scale.setScalar(r);
+  root.add(new THREE.Mesh(new THREE.SphereGeometry(1,32,20),mkMat(c,o)));
+  scene.add(root);return{type:'sphere',root,name:newName(),color:c,opacity:o};
+}
+function makeEllipsoid(pos){
+  const c=vEl('n-color'),o=+vEl('n-opacity'),a=+vEl('n-ea')||2000,b=+vEl('n-eb')||2000,cv=+vEl('n-ec')||1000,d=+vEl('n-depth')||0;
+  const root=new THREE.Group();root.position.copy(pos);root.position.y-=d;root.scale.set(a,cv,b);
+  root.add(new THREE.Mesh(new THREE.SphereGeometry(1,40,28),mkMat(c,o)));
+  scene.add(root);return{type:'ellipsoid',root,name:newName(),color:c,opacity:o};
+}
+function makeCylinder(pos){
+  const c=vEl('n-color'),o=+vEl('n-opacity'),r=+vEl('n-cylr')||500,h=+vEl('n-cylh')||2000,d=+vEl('n-depth')||0;
+  const root=new THREE.Group();root.position.copy(pos);root.position.y-=d;root.scale.set(r,h,r);
+  root.add(new THREE.Mesh(new THREE.CylinderGeometry(1,1,1,40),mkMat(c,o)));
+  scene.add(root);return{type:'cylinder',root,name:newName(),color:c,opacity:o};
+}
+function makeBox(pos){
+  const c=vEl('n-color'),o=+vEl('n-opacity'),w=+vEl('n-bw')||1000,h=+vEl('n-bh')||1000,dv=+vEl('n-bd')||1000,d=+vEl('n-depth')||0;
+  const root=new THREE.Group();root.position.copy(pos);root.position.y-=d;root.scale.set(w,h,dv);
+  root.add(new THREE.Mesh(new THREE.BoxGeometry(1,1,1),mkMat(c,o)));
+  scene.add(root);return{type:'box',root,name:newName(),color:c,opacity:o};
+}
+function makeDisc(pos){
+  const c=vEl('n-color'),o=+vEl('n-opacity'),r=+vEl('n-discr')||2000,t=Math.max(+vEl('n-disct')||10,1),d=+vEl('n-depth')||0;
+  const root=new THREE.Group();root.position.copy(pos);root.position.y-=d;root.scale.set(r,t,r);
+  const mat=getMat(c,o); mat.side=THREE.DoubleSide;
+  root.add(new THREE.Mesh(new THREE.CylinderGeometry(1,1,1,48),mat));
+  scene.add(root);return{type:'disc',root,name:newName(),color:c,opacity:o};
+}
+function makeRect(pos){
+  const c=vEl('n-color'),o=+vEl('n-opacity'),w=+vEl('n-rw')||2000,dv=+vEl('n-rd')||2000,t=Math.max(+vEl('n-rt')||10,1),d=+vEl('n-depth')||0;
+  const root=new THREE.Group();root.position.copy(pos);root.position.y-=d;root.scale.set(w,t,dv);
+  const mat=getMat(c,o); mat.side=THREE.DoubleSide;
+  root.add(new THREE.Mesh(new THREE.BoxGeometry(1,1,1),mat));
+  scene.add(root);return{type:'rect',root,name:newName(),color:c,opacity:o};
+}
+function buildCampanaMeshes(group,r,h,color,opacity){
+  const mat=getMat(color,opacity);
+  const cyl=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,40,1,true),mat.clone());cyl.position.y=h/2;group.add(cyl);
+  const bot=new THREE.Mesh(new THREE.CircleGeometry(r,40),mat.clone());bot.rotation.x=-Math.PI/2;group.add(bot);
+  const hem=new THREE.Mesh(new THREE.SphereGeometry(r,40,20,0,Math.PI*2,0,Math.PI/2),mat.clone());hem.position.y=h;group.add(hem);
+  group.userData.campanaR=r;group.userData.campanaH=h;
+}
+function makeCampana(pos){
+  const c=vEl('n-color'),o=+vEl('n-opacity'),r=+vEl('n-cr')||1000,h=+vEl('n-ch')||2000,d=+vEl('n-depth')||0;
+  const root=new THREE.Group();root.position.copy(pos);root.position.y-=d;
+  buildCampanaMeshes(root,r,h,c,o);scene.add(root);return{type:'campana',root,name:newName(),color:c,opacity:o};
+}
+function rebuildCampana(s){
+  const r=+vEl('s-cr'),h=+vEl('s-ch');if(!r||!h)return;
+  while(s.root.children.length){const c=s.root.children[0];if(c.geometry)c.geometry.dispose();s.root.remove(c);}
+  buildCampanaMeshes(s.root,r,h,s.color,s.opacity);
+}
+
+// ── Volume ────────────────────────────────────────────────────
+function computeVolume(s){
+  const sc=s.root.scale;
+  if(s.type==='sphere')   return(4/3)*Math.PI*sc.x**3;
+  if(s.type==='ellipsoid')return(4/3)*Math.PI*sc.x*sc.y*sc.z;
+  if(s.type==='cylinder') return Math.PI*sc.x**2*sc.y;
+  if(s.type==='box')      return sc.x*sc.y*sc.z;
+  if(s.type==='disc')     return Math.PI*sc.x**2*sc.y;
+  if(s.type==='rect')     return sc.x*sc.y*sc.z;
+  if(s.type==='campana'){ const r=(s.root.userData.campanaR||1)*sc.x,h=(s.root.userData.campanaH||1)*sc.y; return Math.PI*r*r*h+(2/3)*Math.PI*r*r*r; }
+  return 0;
+}
+function fmtVol(m3){ if(m3<=0)return'0 m³';const k=m3/1e9;return k>=.0001?k.toFixed(4)+' km³':(m3/1e6).toFixed(3)+' ×10⁶ m³'; }
+
+// ── Shape management + undo/redo ──────────────────────────────
+function addShape(s) {
+  shapes.push(s); selObjs.push(s.root);
+  undoStack.push({type:'add',shape:s}); redoStack.length=0;
+  updateRenderOrders(); selectShape(s); renderLayerPanel();
+}
+function removeShape(idx) {
+  const s=shapes[idx]; scene.remove(s.root);
+  const i=selObjs.indexOf(s.root); if(i!==-1)selObjs.splice(i,1);
+  shapes.splice(idx,1);
+  if(selShape===s)deselect();
+  updateRenderOrders(); renderLayerPanel();
+}
+
+function undo() {
+  if(!undoStack.length)return;
+  const act=undoStack.pop();
+  if(act.type==='add'){
+    const i=shapes.indexOf(act.shape);
+    if(i!==-1){scene.remove(act.shape.root);shapes.splice(i,1);selObjs.splice(selObjs.indexOf(act.shape.root),1);if(selShape===act.shape)deselect();}
+  }
+  redoStack.push(act);
+  updateRenderOrders(); renderLayerPanel();
+}
+function redo() {
+  if(!redoStack.length)return;
+  const act=redoStack.pop();
+  if(act.type==='add'){scene.add(act.shape.root);shapes.push(act.shape);selObjs.push(act.shape.root);}
+  undoStack.push(act);
+  updateRenderOrders(); renderLayerPanel();
+}
+
+// ── Layer opacity ─────────────────────────────────────────────
+function applyObjOpacity(obj,opacity){
+  obj.traverse(o=>{if(!o.isMesh||!o.material)return;const mats=Array.isArray(o.material)?o.material:[o.material];mats.forEach(m=>{m.transparent=true;m.opacity=opacity;m.needsUpdate=true;});});
+}
+
+// ── Selection ─────────────────────────────────────────────────
+function selectShape(s) {
+  selShape=s; tc.attach(s.root);
+  document.getElementById('rp-empty').style.display='none';
+  document.getElementById('rp-create').style.display='none';
+  document.getElementById('rp-select').style.display='block';
+  document.getElementById('gleg').style.display='block';
+  document.getElementById('s-type').textContent=s.type.toUpperCase();
+  ['sphere','ellipsoid','cylinder','box','disc','rect','campana'].forEach(t=>
+    document.getElementById('sp-'+t).style.display=s.type===t?'':'none');
+  syncSelPanel(); renderLayerPanel();
+}
+function deselect(){
+  selShape=null;tc.detach();
+  document.getElementById('gleg').style.display='none';
+  document.getElementById('rp-select').style.display='none';
+  document.getElementById('rp-create').style.display='none';
+  document.getElementById('rp-empty').style.display='flex';
+  renderLayerPanel();
+}
+function syncSelPanel(){
+  if(!selShape)return;
+  const r=selShape.root,deg=THREE.MathUtils.radToDeg,sc=r.scale;
+  sv('s-px',r.position.x.toFixed(1));sv('s-py',r.position.y.toFixed(1));sv('s-pz',r.position.z.toFixed(1));
+  sv('s-rx',deg(r.rotation.x).toFixed(1));sv('s-ry',deg(r.rotation.y).toFixed(1));sv('s-rz',deg(r.rotation.z).toFixed(1));
+  if(selShape.type==='sphere')   {sv('s-sr',sc.x.toFixed(1));}
+  if(selShape.type==='ellipsoid'){sv('s-ea',sc.x.toFixed(1));sv('s-eb',sc.z.toFixed(1));sv('s-ec',sc.y.toFixed(1));}
+  if(selShape.type==='cylinder') {sv('s-cylr',sc.x.toFixed(1));sv('s-cylh',sc.y.toFixed(1));}
+  if(selShape.type==='box')      {sv('s-bw',sc.x.toFixed(1));sv('s-bh',sc.y.toFixed(1));sv('s-bd',sc.z.toFixed(1));}
+  if(selShape.type==='disc')     {sv('s-discr',sc.x.toFixed(1));sv('s-disct',sc.y.toFixed(1));}
+  if(selShape.type==='rect')     {sv('s-rw',sc.x.toFixed(1));sv('s-rd',sc.z.toFixed(1));sv('s-rt',sc.y.toFixed(1));}
+  if(selShape.type==='campana')  {sv('s-cr',((r.userData.campanaR||1)*sc.x).toFixed(1));sv('s-ch',((r.userData.campanaH||1)*sc.y).toFixed(1));}
+  const mat=selShape.root.children[0]?.material;
+  if(mat)document.getElementById('s-color').value='#'+new THREE.Color(mat.color).getHexString();
+  document.getElementById('s-name').value=selShape.name;
+  document.getElementById('v-sel').textContent=fmtVol(computeVolume(selShape));
+  document.getElementById('v-tot').textContent=fmtVol(shapes.reduce((a,sh)=>a+computeVolume(sh),0));
+}
+function applyPos(){if(!selShape)return;selShape.root.position.set(+vEl('s-px'),+vEl('s-py'),+vEl('s-pz'));}
+function applyRot(){if(!selShape)return;const rad=THREE.MathUtils.degToRad;selShape.root.rotation.set(rad(+vEl('s-rx')),rad(+vEl('s-ry')),rad(+vEl('s-rz')));}
+function applySize(){
+  if(!selShape)return;const sc=selShape.root.scale;
+  if(selShape.type==='sphere')   sc.setScalar(+vEl('s-sr')||1);
+  if(selShape.type==='ellipsoid')sc.set(+vEl('s-ea')||1,+vEl('s-ec')||1,+vEl('s-eb')||1);
+  if(selShape.type==='cylinder') {const r=+vEl('s-cylr')||1;sc.set(r,+vEl('s-cylh')||1,r);}
+  if(selShape.type==='box')      sc.set(+vEl('s-bw')||1,+vEl('s-bh')||1,+vEl('s-bd')||1);
+  if(selShape.type==='disc')     {const r=+vEl('s-discr')||1;sc.set(r,Math.max(+vEl('s-disct')||1,1),r);}
+  if(selShape.type==='rect')     sc.set(+vEl('s-rw')||1,Math.max(+vEl('s-rt')||1,1),+vEl('s-rd')||1);
+  if(selShape.type==='campana')  rebuildCampana(selShape);
+  syncSelPanel();
+}
+function applyColor(){
+  if(!selShape)return;const c=document.getElementById('s-color').value;selShape.color=c;
+  selShape.root.traverse(o=>{if(o.isMesh&&o.material)o.material.color.set(c);});renderLayerPanel();
+}
+
+// ── Mode ──────────────────────────────────────────────────────
+const HINTS={navigate:'NAVIGA — sin: ruota · dest: pan · scroll: zoom',select:'SELEZIONA — clic su forma · vuoto: deseleziona',
+  'add-sphere':'SFERA — clic terreno · poi T/R/S','add-ellipsoid':'ELLISSOIDE — clic terreno · poi T/R/S',
+  'add-cylinder':'CILINDRO — clic terreno · poi T/R/S','add-box':'CUBO — clic terreno · poi T/R/S',
+  'add-disc':'DISCO — clic terreno · poi R per inclinare','add-rect':'PIANO — clic terreno · poi R per orientare',
+  'add-campana':'CAMPANA — clic terreno · poi T per profondità'};
+const MLABEL={navigate:'NAVIGA',select:'SELEZIONA','add-sphere':'+ SFERA','add-ellipsoid':'+ ELLISSOIDE',
+  'add-cylinder':'+ CILINDRO','add-box':'+ CUBO','add-disc':'+ DISCO','add-rect':'+ PIANO','add-campana':'+ CAMPANA'};
+const CP={'add-sphere':'np-sphere','add-ellipsoid':'np-ellipsoid','add-cylinder':'np-cylinder',
+  'add-box':'np-box','add-disc':'np-disc','add-rect':'np-rect','add-campana':'np-campana'};
+const CL={'add-sphere':'SFERA','add-ellipsoid':'ELLISSOIDE','add-cylinder':'CILINDRO',
+  'add-box':'CUBO','add-disc':'DISCO','add-rect':'PIANO RETT.','add-campana':'CAMPANA'};
+
+function setMode(m){
+  mode=m;orbit.enabled=true;
+  document.querySelectorAll('.tb[data-mode]').forEach(b=>b.classList.toggle('on',b.dataset.mode===m));
+  document.getElementById('hint').textContent=HINTS[m]||m;
+  document.getElementById('st-m').textContent=MLABEL[m]||m;
+  canvas.style.cursor=m==='navigate'?'grab':m==='select'?'default':'crosshair';
+  const isAdd=m.startsWith('add-');
+  document.getElementById('rp-empty').style.display=(!isAdd&&!selShape)?'flex':'none';
+  document.getElementById('rp-select').style.display=(selShape&&!isAdd)?'block':'none';
+  document.getElementById('rp-create').style.display=isAdd?'block':'none';
+  if(isAdd){
+    Object.values(CP).forEach(id=>document.getElementById(id).style.display='none');
+    if(CP[m])document.getElementById(CP[m]).style.display='';
+    document.getElementById('rp-ctype').textContent=CL[m]||m;
+  }
+}
+
+// ── Click ──────────────────────────────────────────────────────
+let mdX=0,mdY=0;
+canvas.addEventListener('mousedown',e=>{if(e.button===0){mdX=e.clientX;mdY=e.clientY;}});
+canvas.addEventListener('mouseup',e=>{
+  if(e.button!==0||tcDragging)return;
+  if(Math.abs(e.clientX-mdX)>6||Math.abs(e.clientY-mdY)>6)return;
+  const s=hitShape(e);
+  if(s){selectShape(s);setMode('select');return;}
+  if(mode==='navigate'||mode==='select'){if(selShape)deselect();return;}
+  if(!terrainLoaded)return;
+  const pt=hitTerrain(e);if(!pt)return;
+  const creators={'add-sphere':makeSphere,'add-ellipsoid':makeEllipsoid,'add-cylinder':makeCylinder,
+    'add-box':makeBox,'add-disc':makeDisc,'add-rect':makeRect,'add-campana':makeCampana};
+  const fn=creators[mode];if(fn){addShape(fn(pt));setMode('select');}
+});
+
+// ── TC mode ───────────────────────────────────────────────────
+function setTC(m){
+  tc.setMode(m);
+  document.querySelectorAll('.tcb[data-tc]').forEach(b=>b.classList.toggle('on',b.dataset.tc===m));
+  document.getElementById('st-tc').textContent={translate:'TRASLA',rotate:'RUOTA',scale:'SCALA'}[m]||m;
+}
+document.querySelectorAll('.tcb[data-tc]').forEach(b=>b.addEventListener('click',()=>setTC(b.dataset.tc)));
+document.getElementById('btn-space').addEventListener('click',()=>{
+  tcSpace=tcSpace==='world'?'local':'world';tc.setSpace(tcSpace);document.getElementById('btn-space').textContent=tcSpace.toUpperCase();
+});
+
+// ── Panel wiring ──────────────────────────────────────────────
+['s-px','s-py','s-pz'].forEach(id=>document.getElementById(id).addEventListener('change',applyPos));
+['s-rx','s-ry','s-rz'].forEach(id=>document.getElementById(id).addEventListener('change',applyRot));
+['s-sr','s-ea','s-eb','s-ec','s-cylr','s-cylh','s-bw','s-bh','s-bd','s-discr','s-disct','s-rw','s-rd','s-rt','s-cr','s-ch']
+  .forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('change',applySize);});
+document.getElementById('s-color').addEventListener('input',applyColor);
+document.getElementById('s-name').addEventListener('input',e=>{if(selShape){selShape.name=e.target.value;renderLayerPanel();}});
+document.getElementById('n-opacity').addEventListener('input',e=>{document.getElementById('n-opv').textContent=(+e.target.value).toFixed(2);});
+
+// ── Toolbar buttons ───────────────────────────────────────────
+document.querySelectorAll('.tb[data-mode]').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
+document.getElementById('btn-undo').addEventListener('click',undo);
+document.getElementById('btn-redo').addEventListener('click',redo);
+document.getElementById('btn-clear').addEventListener('click',()=>{if(!shapes.length||!confirm('Cancellare tutto?'))return;while(shapes.length)removeShape(0);});
+document.getElementById('btn-del').addEventListener('click',()=>{if(selShape)removeShape(shapes.indexOf(selShape));});
+document.getElementById('btn-grid3d').addEventListener('click',()=>{
+  gridOn=!gridOn;if(gridGroup)gridGroup.visible=gridOn;document.getElementById('btn-grid3d').classList.toggle('on',gridOn);
+});
+
+// ── Keyboard ──────────────────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT')return;
+  const k=e.key.toLowerCase();
+  if(k==='n')setMode('navigate');
+  else if(k==='v')setMode('select');
+  else if(k==='p')setMode('add-sphere');
+  else if(k==='e')setMode('add-ellipsoid');
+  else if(k==='l')setMode('add-cylinder');
+  else if(k==='b')setMode('add-box');
+  else if(k==='d')setMode('add-disc');
+  else if(k==='q')setMode('add-rect');
+  else if(k==='c')setMode('add-campana');
+  else if(k==='t')setTC('translate');
+  else if(k==='r')setTC('rotate');
+  else if(k==='s'&&!e.ctrlKey&&!e.metaKey)setTC('scale');
+  else if(e.key==='Escape'){deselect();setMode('navigate');}
+  else if(e.key==='Delete'||e.key==='Backspace'){if(selShape)removeShape(shapes.indexOf(selShape));}
+  else if(k==='z'&&(e.ctrlKey||e.metaKey)){e.preventDefault();undo();}
+  else if(k==='y'&&(e.ctrlKey||e.metaKey)){e.preventDefault();redo();}
+});
+
+// ── Layer panel ───────────────────────────────────────────────
+const typeIco={sphere:'⬤',ellipsoid:'◎',cylinder:'⬣',box:'⬛',disc:'○',rect:'▭',campana:'🔔'};
+function renderLayerPanel(){
+  const tw=document.getElementById('lyr-terrain-wrap'),tl=document.getElementById('lyr-terrain-list');
+  tw.style.display=gltfLayers.length?'':'none';
+  tl.innerHTML=gltfLayers.map(l=>`
+    <div class="lyr-item">
+      <span class="lyr-ico">⛰</span>
+      <span class="lyr-nm" title="${l.name}">${l.name}</span>
+      <button class="lyr-vis ${l.visible?'':'off'}" data-lid="${l.id}">${l.visible?'◎':'○'}</button>
+      <input type="range" class="lyr-sldr" min="0" max="1" step=".05" value="${l.opacity}" data-lop="${l.id}">
+    </div>`).join('');
+  const sl=document.getElementById('lyr-shapes-list');
+  document.getElementById('lyr-cnt').textContent=shapes.length;
+  if(!shapes.length){sl.innerHTML='<div class="lyr-empty">Nessuna forma</div>';return;}
+  sl.innerHTML=shapes.map((s,i)=>`
+    <div class="lyr-item ${s===selShape?'sel':''}" data-si="${i}">
+      <span class="lyr-dot" style="background:${s.color}"></span>
+      <span class="lyr-nm" title="${s.name}">${s.name}</span>
+      <span class="lyr-ico">${typeIco[s.type]||'?'}</span>
+      <button class="lyr-vis ${s.root.visible?'':'off'}" data-svis="${i}">${s.root.visible?'◎':'○'}</button>
+      <input type="range" class="lyr-sldr" min="0" max="1" step=".05" value="${s.opacity}" data-sop="${i}">
+    </div>`).join('');
+  tl.querySelectorAll('.lyr-vis').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();const l=gltfLayers.find(l=>l.id==+b.dataset.lid);if(!l)return;l.visible=!l.visible;l.object.visible=l.visible;renderLayerPanel();}));
+  tl.querySelectorAll('.lyr-sldr').forEach(inp=>inp.addEventListener('input',()=>{const l=gltfLayers.find(l=>l.id==+inp.dataset.lop);if(!l)return;l.opacity=+inp.value;applyObjOpacity(l.object,l.opacity);}));
+  sl.querySelectorAll('.lyr-item').forEach(el=>el.addEventListener('click',e=>{if(e.target.classList.contains('lyr-vis')||e.target.classList.contains('lyr-sldr'))return;selectShape(shapes[+el.dataset.si]);setMode('select');}));
+  sl.querySelectorAll('.lyr-vis').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();const s=shapes[+b.dataset.svis];s.root.visible=!s.root.visible;renderLayerPanel();}));
+  sl.querySelectorAll('.lyr-sldr').forEach(inp=>inp.addEventListener('input',()=>{const s=shapes[+inp.dataset.sop];if(!s)return;s.opacity=+inp.value;applyObjOpacity(s.root,s.opacity);}));
+}
+
+// ── Scale bar ─────────────────────────────────────────────────
+const sbBar=document.getElementById('sb-bar'),sbLbl=document.getElementById('sb-lbl');
+const _p1=new THREE.Vector3(),_p2=new THREE.Vector3();
+function updateScaleBar(){
+  _p1.copy(orbit.target);_p2.copy(orbit.target);_p2.x+=1000;
+  _p1.project(camera);_p2.project(camera);
+  const px=Math.abs(_p2.x-_p1.x)*cw.clientWidth/2;
+  let km=1;
+  if(px>400)km=.1;else if(px>200)km=.5;else if(px<8)km=50;else if(px<20)km=10;else if(px<50)km=5;else if(px<90)km=2;
+  sbBar.style.width=Math.max(8,Math.min(180,px*km))+'px';
+  sbLbl.textContent=km<1?`${km*1000} m`:`${km} km`;
+}
+
+// ── File loading ──────────────────────────────────────────────
+const dov=document.getElementById('drop');
+cw.addEventListener('dragover',e=>{e.preventDefault();dov.classList.add('vis');});
+cw.addEventListener('dragleave',()=>dov.classList.remove('vis'));
+cw.addEventListener('drop',e=>{e.preventDefault();dov.classList.remove('vis');const f=e.dataTransfer.files[0];if(f&&/\.(gltf|glb)$/i.test(f.name))loadFile(f);});
+document.getElementById('btn-load').addEventListener('click',()=>document.getElementById('finput').click());
+document.getElementById('finput').addEventListener('change',e=>{if(e.target.files[0])loadFile(e.target.files[0]);});
+
+// ── Exports ───────────────────────────────────────────────────
+document.getElementById('btn-exp-json').addEventListener('click',()=>{
+  const deg=THREE.MathUtils.radToDeg;
+  const data=shapes.map(s=>{
+    const r=s.root,sc=r.scale;
+    const out={name:s.name,type:s.type,color:s.color,
+      position:{x:+r.position.x.toFixed(2),y:+r.position.y.toFixed(2),z:+r.position.z.toFixed(2)},
+      rotation_deg:{x:+deg(r.rotation.x).toFixed(2),y:+deg(r.rotation.y).toFixed(2),z:+deg(r.rotation.z).toFixed(2)},
+      volume_km3:+(computeVolume(s)/1e9).toFixed(6)};
+    if(s.type==='sphere')   out.radius=+sc.x.toFixed(2);
+    if(s.type==='ellipsoid')out.semiaxes={a:+sc.x.toFixed(2),b:+sc.z.toFixed(2),c:+sc.y.toFixed(2)};
+    if(s.type==='cylinder') out.dimensions={radius:+sc.x.toFixed(2),height:+sc.y.toFixed(2)};
+    if(s.type==='box')      out.dimensions={w:+sc.x.toFixed(2),h:+sc.y.toFixed(2),d:+sc.z.toFixed(2)};
+    if(s.type==='disc')     out.dimensions={radius:+sc.x.toFixed(2),thickness:+sc.y.toFixed(2)};
+    if(s.type==='rect')     out.dimensions={w:+sc.x.toFixed(2),d:+sc.z.toFixed(2),t:+sc.y.toFixed(2)};
+    if(s.type==='campana')  out.dimensions={radius:(s.root.userData.campanaR||1)*sc.x,cyl_height:(s.root.userData.campanaH||1)*sc.y};
+    return out;
+  });
+  const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),download:'caldera_sketch.json'});a.click();
+});
+const exporter=new GLTFExporter();
+document.getElementById('btn-exp-glb').addEventListener('click',()=>{
+  if(!shapes.length){alert('Nessuna forma da esportare.');return;}
+  const grp=new THREE.Group();shapes.forEach(s=>grp.add(s.root.clone()));
+  exporter.parse(grp,result=>{
+    const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([result],{type:'model/gltf-binary'})),download:'caldera_sketch.glb'});a.click();
+  },err=>{alert('Errore GLB: '+err);},{binary:true});
+});
+
+// ── Render loop ───────────────────────────────────────────────
+(function tick(){
+  requestAnimationFrame(tick);
+  orbit.update();
+  if(gridOn)updateGridFaces();
+  updateScaleBar();
+  renderer.render(scene,camera);
+  labelRenderer.render(scene,camera);
+})();
+
+setMode('navigate');setTC('translate');renderLayerPanel();
+</script>
+</body>
+</html>
